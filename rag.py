@@ -49,12 +49,18 @@ that this is general information and not from the company's records.
 
 
 def _get_client() -> genai.Client:
-    if not API_KEY:
+    api_key = _find_api_key()
+    if not api_key:
+        try:
+            found = list(st.secrets.keys())
+        except Exception:
+            found = []
         raise RuntimeError(
-            "GEMINI_API_KEY not found. Add it to .env (local) or Streamlit Secrets (cloud)."
+            "GEMINI_API_KEY not found. "
+            f"Secret names I can see: {found if found else 'none'}. "
+            "Add GEMINI_API_KEY in Streamlit Settings → Secrets, then reboot."
         )
-    return genai.Client(api_key=API_KEY)
-
+    return genai.Client(api_key=api_key)
 
 def load_chunks(path: Path = DATA_FILE) -> list[str]:
     """Split the FAQ file into chunks (one Q&A block per chunk)."""
