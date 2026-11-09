@@ -1,188 +1,142 @@
-import os
+"""
+app.py - Streamlit chat UI for CustomBot.
+
+Run with:  streamlit run app.py
+"""
+
+import io
+from datetime import datetime
+
 import streamlit as st
-from dotenv import load_dotenv
-from google import genai
+from docx import Document
+from fpdf import FPDF
+
 from rag import KnowledgeBase
 
-# Load environment variables
-load_dotenv()
-
-# Streamlit page configuration
-st.set_page_config(
-    page_title="CustomBot",
-    page_icon="🤖",
-    layout="centered"
-)
+st.set_page_config(page_title="CustomBot", page_icon="💬", layout="centered")
 
 
-@st.cache_resource
-def load_kb():
-    """Load the knowledge base once."""
-    return KnowledgeBase("data")
+# ---------- File export helpers ----------
+def to_txt(question: str, answer: str) -> bytes:
+    return f"Question:\n{question}\n\nAnswer:\n{answer}\n".encode("utf-8")
 
 
-kb = load_kb()
+def to_docx(question: str, answer: str) -> bytes:
+    doc = Document()
+    doc.add_heading("CustomBot Answer", level=1)
+    doc.add_paragraph(datetime.now().strftime("%d %b %Y, %H:%M"))
+    doc.add_heading("Question", level=2)
+    doc.add_paragraph(question)
+    doc.add_heading("Answer", level=2)
+    for line in answer.split("\n"):
+        doc.add_paragraph(line)
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    return buffer.getvalue()
 
 
-def get_client():
-    """Create Google Gemini client."""
-    api_key = os.getenv("GOOGLE_API_KEY")
+def to_pdf(question: str, answer: str) -> bytes:
+    # Built-in PDF fonts only support basic Latin characters, so replace others.
+    def clean(text: str) -> str:
+        return text.encode("latin-1", "replace").decode("latin-1")
 
-    if api_key:
-        return genai.Client(api_key=api_key)
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
 
-    return None
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "CustomBot Answer", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 8, datetime.now().strftime("%d %b %Y, %H:%M"), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
 
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Question", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 12)
+    pdf.multi_cell(0, 7, clean(question), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
 
-# ---------------------------
-# SIDEBAR
-# ---------------------------
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(0, 8, "Answer", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 12)
+    pdf.multi_cell(0, 7, clean(answer), new_x="LMARGIN", new_y="NEXT")
 
-with st.sidebar:
-    st.header("⚙️ CustomBot Settings")
-
-    st.write(
-        f"📚 Knowledge Base: **{kb.document_count} document(s)**"
-    )
-
-    if st.button("🗑️ Clear Conversation"):
-        st.session_state.messages = []
-        st.rerun()
-
-    st.divider()
-
-    st.subheader("👩‍💼 Human Support")
-
-    escalation_email = os.getenv(
-        "SUPPORT_EMAIL",
-        "support@example.com"
-    )
-
-    st.info(escalation_email)
+    return bytes(pdf.output())
 
 
-# ---------------------------
-# MAIN INTERFACE
-# ---------------------------
+def answer_actions(question: str, answer: str, key: str):
+    """Show the copy box + download buttons under an answer."""
+    with st.expander("📋 Copy or download this answer"):
+        st.caption("Use the copy icon at the top-right of the box below:")
+        st.code(answer, language=None, wrap_lines=True)
 
-st.title("🤖 CustomBot")
-st.caption("Your AI Customer Support Assistant")
+        c1, c2, c3 = st.columns(3)
+        c1.download_button(
+            "⬇️ Text (.txt)", to_txt(question, answer),
+            file_name="answer.txt", mime="text/plain", key=f"txt_{key}",
+            use_container_width=True,
+        )
+        c2.download_button(
+            "⬇️ Word (.docx)", to_docx(question, answer),
+            file_name="answer.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key=f"docx_{key}", use_container_width=True,
+        )
+        c3.download_button(
+            "⬇️ PDF (.pdf)", to_pdf(question, answer),
+            file_name="answer.pdf", mime="application/pdf", key=f"pdf_{key}",
+            use_container_width=True,
+        )
 
-# Create conversation memory
+
+# ---------- Load knowledge base once ----------
+@st.cache_resource(show_spinner="Getting things ready...")
+def load_kb() -> KnowledgeBase:
+    return KnowledgeBase()
+
+
+try:
+    kb = load_kb()
+except Exception as e:
+    st.error(f"Setup problem: {e}")
+    st.stop()
+
+
+# ---------- Page ----------
+st.title("💬 CustomBot")
+st.caption("Ask me anything. I'll explain it in a simple, easy way.")
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+with st.sidebar:
+    st.header("About")
+    st.write("Answers come from the company FAQ, explained in plain, friendly language.")
+    if st.button("🗑️ Clear chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
 
-# Display previous messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# Show earlier messages
+for i, msg in enumerate(st.session_state.messages):
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+        if msg["role"] == "assistant":
+            question = st.session_state.messages[i - 1]["content"]
+            answer_actions(question, msg["content"], key=str(i))
 
-
-# Chat input
-prompt = st.chat_input(
-    "Ask a question about our products or services..."
-)
-
-
-if prompt:
-
-    # Save user message
-    st.session_state.messages.append(
-        {
-            "role": "user",
-            "content": prompt
-        }
-    )
-
-    # Display user message
+# New question
+if user_q := st.chat_input("Type your question here..."):
+    history = list(st.session_state.messages)  # history before this question
+    st.session_state.messages.append({"role": "user", "content": user_q})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.write(user_q)
 
-
-    # Generate response
     with st.chat_message("assistant"):
-
-        with st.spinner("CustomBot is thinking..."):
-
-            # Search knowledge base
-            context = kb.search(
-                prompt,
-                top_k=4
-            )
-
-            # If no relevant information is found
-            if not context:
-
-                answer = (
-                    "I couldn't find a reliable answer "
-                    "in our knowledge base. Please contact "
-                    "our human support team for further assistance."
-                )
-
-            else:
-
-                client = get_client()
-
-                # Check API key
-                if not client:
-
-                    answer = (
-                        "⚠️ CustomBot is not connected to Gemini yet. "
-                        "Please add your GOOGLE_API_KEY."
-                    )
-
-                else:
-
-                    # Get recent conversation history
-                    history = st.session_state.messages[-8:-1]
-
-                    history_text = "\n".join(
-                        f'{message["role"].title()}: '
-                        f'{message["content"]}'
-                        for message in history
-                    )
-
-                    # Create AI instructions
-                    system_prompt = f"""
-You are CustomBot, a helpful AI Customer Support Assistant.
-
-Answer customer questions using ONLY the information
-provided in the knowledge base.
-
-If the answer is not available in the knowledge base,
-say that you do not know and recommend contacting
-human support.
-
-Never invent company policies or information.
-
-KNOWLEDGE BASE:
-{context}
-
-RECENT CONVERSATION:
-{history_text}
-"""
-
-                    # Generate Gemini response
-                    response = client.models.generate_content(
-                        model=os.getenv(
-                            "GEMINI_MODEL",
-                            "gemini-2.0-flash"
-                        ),
-                        contents=f"{system_prompt}\n\nUser Question: {prompt}"
-                    )
-
-                    answer = response.text
-
-
-        # Display response
-        st.markdown(answer)
-
-
-    # Save bot response
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": answer
-        }
-    )
+        with st.spinner("Thinking..."):
+            try:
+                reply = kb.answer(user_q, history)
+            except Exception as e:
+                reply = f"Sorry, something went wrong: {e}"
+        st.write(reply)
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        answer_actions(user_q, reply, key=str(len(st.session_state.messages) - 1))
