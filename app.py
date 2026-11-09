@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
 from rag import KnowledgeBase
 
 # Load environment variables
@@ -21,16 +21,15 @@ def load_kb():
     return KnowledgeBase("data")
 
 
-# Load knowledge base
 kb = load_kb()
 
 
 def get_client():
-    """Create OpenAI client."""
-    api_key = os.getenv("OPENAI_API_KEY")
+    """Create Google Gemini client."""
+    api_key = os.getenv("GOOGLE_API_KEY")
 
     if api_key:
-        return OpenAI(api_key=api_key)
+        return genai.Client(api_key=api_key)
 
     return None
 
@@ -59,10 +58,6 @@ with st.sidebar:
         "support@example.com"
     )
 
-    st.write(
-        f"If you need human assistance, contact:"
-    )
-
     st.info(escalation_email)
 
 
@@ -80,7 +75,6 @@ if "messages" not in st.session_state:
 
 # Display previous messages
 for message in st.session_state.messages:
-
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
@@ -106,41 +100,36 @@ if prompt:
         st.markdown(prompt)
 
 
-    # Create bot response
+    # Generate response
     with st.chat_message("assistant"):
 
         with st.spinner("CustomBot is thinking..."):
 
-            # Search the knowledge base
+            # Search knowledge base
             context = kb.search(
                 prompt,
                 top_k=4
             )
 
-            # If no information is found
+            # If no relevant information is found
             if not context:
 
                 answer = (
                     "I couldn't find a reliable answer "
-                    "in our knowledge base. "
-                    "Would you like to contact our "
-                    "human support team?"
+                    "in our knowledge base. Please contact "
+                    "our human support team for further assistance."
                 )
 
             else:
 
-                # Get OpenAI client
                 client = get_client()
 
                 # Check API key
                 if not client:
 
                     answer = (
-                        "⚠️ CustomBot is not connected "
-                        "to an AI provider yet.\n\n"
-                        "Please add your OPENAI_API_KEY "
-                        "to Streamlit Secrets or your "
-                        "local .env file."
+                        "⚠️ CustomBot is not connected to Gemini yet. "
+                        "Please add your GOOGLE_API_KEY."
                     )
 
                 else:
@@ -154,7 +143,7 @@ if prompt:
                         for message in history
                     )
 
-                    # Create system prompt
+                    # Create AI instructions
                     system_prompt = f"""
 You are CustomBot, a helpful AI Customer Support Assistant.
 
@@ -162,7 +151,8 @@ Answer customer questions using ONLY the information
 provided in the knowledge base.
 
 If the answer is not available in the knowledge base,
-say that you do not know and offer human support.
+say that you do not know and recommend contacting
+human support.
 
 Never invent company policies or information.
 
@@ -173,32 +163,16 @@ RECENT CONVERSATION:
 {history_text}
 """
 
-                    # Generate AI response
-                    response = client.chat.completions.create(
-
+                    # Generate Gemini response
+                    response = client.models.generate_content(
                         model=os.getenv(
-                            "OPENAI_MODEL",
-                            "gpt-4o-mini"
+                            "GEMINI_MODEL",
+                            "gemini-2.0-flash"
                         ),
-
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": system_prompt
-                            },
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-
-                        temperature=0.2
+                        contents=f"{system_prompt}\n\nUser Question: {prompt}"
                     )
 
-                    answer = (
-                        response.choices[0]
-                        .message.content
-                    )
+                    answer = response.text
 
 
         # Display response
