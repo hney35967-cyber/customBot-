@@ -1,42 +1,23 @@
-CUSTOMBOT DEMO COMPANY FAQ
+Q: What does the company do?
+A: We build simple software tools that help small businesses manage their customers, invoices and daily tasks in one place.
 
+Q: What are your working hours?
+A: Our support team is available Monday to Friday, 9:00 AM to 6:00 PM. Messages sent outside these hours are answered the next working day.
 
-BUSINESS HOURS
+Q: How can I contact support?
+A: You can email support@example.com or use the live chat on our website. Most replies arrive within 24 hours.
 
-Our customer support team is available Monday to Friday,
-9:00 AM to 6:00 PM.
+Q: What is your refund policy?
+A: If you are not happy, you can request a full refund within 14 days of purchase. After 14 days, refunds are reviewed case by case.
 
+Q: How do I reset my password?
+A: Click "Forgot password" on the login page, enter your email, and follow the link we send you. The link works for 30 minutes.
 
-SHIPPING
+Q: Do you offer a free trial?
+A: Yes. Every new account gets a 14-day free trial with all features unlocked. No credit card is needed to start.
 
-Standard orders are processed within 1 to 2 business days.
-Delivery times may vary depending on your location.
+Q: What payment methods do you accept?
+A: We accept all major credit and debit cards, bank transfers, and PayPal.
 
-
-RETURNS
-
-Customers can request a return within 14 days of receiving
-an eligible product.
-
-Products should be returned in their original condition.
-
-
-REFUNDS
-
-Approved refunds are processed after the returned product
-has been inspected.
-
-
-HUMAN SUPPORT
-
-If CustomBot cannot answer your question, please contact
-our support team at:
-
-support@example.com
-
-
-IMPORTANT
-
-Replace this demo FAQ with your own company FAQs,
-policies, product information, and support documentation
-before deploying CustomBot.
+Q: Is my data safe?
+A: Yes. All data is encrypted in transit and at rest, and we take daily backups. We never sell your data to third parties.
