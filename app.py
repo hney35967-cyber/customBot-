@@ -5,16 +5,21 @@ Run with:  streamlit run app.py
 """
 
 import io
+import traceback
 from datetime import datetime
 
 import streamlit as st
 from docx import Document
 from fpdf import FPDF
 
-from rag import KnowledgeBase
-
 st.set_page_config(page_title="CustomBot", page_icon="💬", layout="centered")
 
+try:
+    from rag import KnowledgeBase
+except Exception:
+    st.error("Could not load rag.py. Details:")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # ---------- File export helpers ----------
 def to_txt(question: str, answer: str) -> bytes:
