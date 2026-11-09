@@ -1,0 +1,42 @@
+CUSTOMBOT DEMO COMPANY FAQ
+
+
+BUSINESS HOURS
+
+Our customer support team is available Monday to Friday,
+9:00 AM to 6:00 PM.
+
+
+SHIPPING
+
+Standard orders are processed within 1 to 2 business days.
+Delivery times may vary depending on your location.
+
+
+RETURNS
+
+Customers can request a return within 14 days of receiving
+an eligible product.
+
+Products should be returned in their original condition.
+
+
+REFUNDS
+
+Approved refunds are processed after the returned product
+has been inspected.
+
+
+HUMAN SUPPORT
+
+If CustomBot cannot answer your question, please contact
+our support team at:
+
+support@example.com
+
+
+IMPORTANT
+
+Replace this demo FAQ with your own company FAQs,
+policies, product information, and support documentation
+before deploying CustomBot.
